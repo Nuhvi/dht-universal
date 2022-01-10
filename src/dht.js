@@ -20,6 +20,6 @@ export const DHT = async (opts) =>
   opts?.relays ? DHTRelayed(opts) : DHTNode(opts)
 
 /**
- * @typedef {import('./interfaces').DHT} DHT
- * @typedef {import('./interfaces').DHTOpts} DHTOpts
+ * @typedef {import('./index').DHT} DHT
+ * @typedef {import('./index').DHTOpts} DHTOpts
  */

@@ -36,6 +36,6 @@ export const DHT = async (opts) => {
 }
 
 /**
- * @typedef {import('./interfaces').DHT} DHT
- * @typedef {import('./interfaces').DHTOpts} DHTOpts
+ * @typedef {import('./index').DHT} DHT
+ * @typedef {import('./index').DHTOpts} DHTOpts
  */
