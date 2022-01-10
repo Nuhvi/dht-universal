@@ -1,6 +1,6 @@
 import { expect } from 'aegir/utils/chai.js';
 import b4a from 'b4a';
-import { DHT } from 'dht-universal';
+import { DHT } from 'dht-universal/dht';
 
 const VALID_RELAY_SERVER = 'wss://dht-relay.synonym.to/';
 const INVALID_RELAY_SERVER = 'ws://invalid.something.net';
