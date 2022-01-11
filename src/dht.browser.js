@@ -4,7 +4,7 @@ import ws from '@hyperswarm/dht-relay/ws'
 const DEFAULT_RELAYS = ['wss://dht-relay.synonym.to/']
 
 /**
- * @param {import ('isomorphic-ws').default} wsServer
+ * @param {import ('isomorphic-ws')} wsServer
  */
 const tryWS = async (wsServer) =>
   new Promise((resolve) => {
@@ -23,7 +23,7 @@ export const DHT = async (opts) => {
 
   const WebSocket = await (await import('isomorphic-ws')).default
 
-  let /** @type {import ('isomorphic-ws').default} */ wsServer, relay
+  let /** @type {import ('isomorphic-ws')} */ wsServer, relay
   while (!wsServer && (relay = relays.shift())) {
     wsServer = await tryWS(new WebSocket(relay))
   }
