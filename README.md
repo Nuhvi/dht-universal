@@ -21,4 +21,18 @@ const noiseSocket = anotherNode.connect(node2.defaultKeyPair.publicKey);
 
 ## API
 
-Same as the instance methods and readonly variables of the [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
+Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
+
+### Covered by tests and type definitions:
+
+Node
+
+- [x] Instantiation
+- [x] `DHT.keyPair([seed])`
+- [x] `node.destroy([opts])`
+
+Browser
+
+- [ ] Instantiation
+- [ ] `DHT.keyPair([seed])`
+- [ ] `node.destroy([opts])`
