@@ -18,3 +18,7 @@ const node = await DHT();
 const anotherNode = await DHT();
 const noiseSocket = anotherNode.connect(node2.defaultKeyPair.publicKey);
 ```
+
+## API
+
+Same as the instance methods and readonly variables of the [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).

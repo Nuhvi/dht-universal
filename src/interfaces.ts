@@ -9,23 +9,40 @@ export interface SecretStream extends Duplex {
   readonly publicKey: Uint8Array;
   readonly remotePublicKey: Uint8Array;
   readonly handshakeHash: Uint8Array;
+
+  on: /** Yep client connections emit open. Part of the streamx state machine https://github.com/hyperswarm/dht/issues/69#issuecomment-1009691870 */
+  ((event: 'open', listener: () => void) => this) &
+    /** They also emit “connect” as nodejs tcp compat https://github.com/hyperswarm/dht/issues/69#issuecomment-1009692257 */
+    ((event: 'connect', listener: () => void) => this) &
+    /** From Stream, please open an issue if you know a better way to inherit this. */
+    ((event: 'close', listener: () => void) => this) &
+    ((event: 'data', listener: (chunk: any) => void) => this) &
+    ((event: 'end', listener: () => void) => this) &
+    ((event: 'error', listener: (err: Error) => void) => this) &
+    ((event: 'pause', listener: () => void) => this) &
+    ((event: 'readable', listener: () => void) => this) &
+    ((event: 'resume', listener: () => void) => this) &
+    ((event: string | symbol, listener: (...args: any[]) => void) => this);
 }
 
 export interface Server extends EventEmitter {
   constructor: (dht: DHT, opts: any) => Server;
-  listen: () => Promise<void>;
+  listen: (keyPair?: KeyPair) => Promise<void>;
   address: () => {
     host: string;
     port: number;
     publicKey: Uint8Array;
   };
+  publicKey: Uint8Array;
   close: () => Promise<void>;
+  closed: boolean;
   on:
     | ((
         event: 'connection',
         cb: (encryptedSocket: SecretStream) => void,
       ) => this)
-    | ((event: 'close', cb: () => void) => this);
+    | ((event: 'close', cb: () => void) => this)
+    | ((event: 'listening', cb: () => void) => this);
 }
 
 export interface HandshakePayload {
@@ -65,6 +82,7 @@ export interface DHT {
    * @param {boolean} [opts.force] - force close the node without waiting for the servers to unannounce.
    */
   destroy: (opts?: { force?: boolean }) => Promise<void>;
+  destroyed: boolean;
   /**
    * Create a new server for accepting incoming encrypted P2P connections.
    */
@@ -96,5 +114,11 @@ export interface DHT {
 }
 
 export interface DHTOpts {
+  keyPair?: KeyPair;
   relays?: string[];
+}
+
+export interface DHTModule {
+  keyPair: (seed?: Uint8Array) => KeyPair;
+  create: (opts?: DHTOpts) => Promise<DHT>;
 }

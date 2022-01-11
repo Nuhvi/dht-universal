@@ -1,25 +1,14 @@
-import _DHT from '@hyperswarm/dht'
-import { DHT as DHTRelayed } from './dht.browser.js'
+import DHTNode from '@hyperswarm/dht';
+import { DHT as DHTRelayed } from './dht.browser.js';
+
+/** @type {DHTModule} */
+export const DHT = {
+  keyPair: DHTNode.keyPair,
+  // @ts-ignore
+  create: async (opts) => (opts?.relays ? DHTRelayed(opts) : new DHTNode(opts)),
+};
 
 /**
- * Returns a Hyperswarm DHT
- *
- * @param {DHTOpts} [opts]
- * @returns {Promise<DHT>}
- */
-// @ts-ignore
-const DHTNode = (opts) => new _DHT(opts)
-
-/**
- * Returns a Hyperswarm DHT
- *
- * @param {DHTOpts} [opts]
- * @returns {Promise<DHT>}
- */
-export const DHT = async (opts) =>
-  opts?.relays ? DHTRelayed(opts) : DHTNode(opts)
-
-/**
+ * @typedef {import('./interfaces').DHTModule } DHTModule
  * @typedef {import('./interfaces').DHT} DHT
- * @typedef {import('./interfaces').DHTOpts} DHTOpts
  */
