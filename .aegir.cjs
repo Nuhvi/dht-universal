@@ -1,4 +1,6 @@
 'use strict';
+const b4a = require('b4a');
+const crypto = require('crypto');
 
 /** @type {import('aegir').PartialOptions} */
 module.exports = {
@@ -13,6 +15,13 @@ module.exports = {
       server.on('connection', (socket) => {
         socket.write('hello');
       });
+
+      const topic = crypto
+        .createHash('sha256')
+        .update(keyPair.publicKey)
+        .digest();
+
+      await node.announce(topic, keyPair).finished();
 
       return {
         node,

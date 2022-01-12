@@ -69,12 +69,21 @@ export interface DHTNode {
 }
 
 export interface Query extends Readable {
-  readonly from: DHTNode & { id: Uint8Array }
-  readonly to: DHTNode
-  readonly peers: [{ publickey: Uint8Array, nodes: DHTNode[] }]
+  readonly closestNodes: Array<DHTNode & { id: Uint8Array }>
+  finished: () => Promise<void>
+
+  on: ((event: 'close', listener: () => void) => this) & ((
+    event: 'data',
+    listener: (chunk: {
+      from: DHTNode & { id: Uint8Array }
+      to: DHTNode
+      peers: [{ publickey: Uint8Array, nodes: DHTNode[] }]
+    }) => void,
+  ) => this) & ((event: 'end', listener: () => void) => this) & ((event: 'error', listener: (err: Error) => void) => this) & ((event: 'pause', listener: () => void) => this) & ((event: 'readable', listener: () => void) => this) & ((event: 'resume', listener: () => void) => this) & ((event: string | symbol, listener: (...args: any[]) => void) => this)
 }
 
 export interface DHT {
+  defaultKeyPair: KeyPair
   /**
    * Fully destroy this DHT node and unannounce any running servers.
    *
@@ -98,7 +107,7 @@ export interface DHT {
    */
   connect: (
     remotePublicKey: Uint8Array,
-    options?: { nodes: [], keyPair: KeyPair },
+    options?: { keyPair: KeyPair },
   ) => SecretStream
   /**
    * Look for peers in the DHT on the given topic. Topic should be a 32 byte buffer (normally a hash of something).
@@ -107,9 +116,12 @@ export interface DHT {
    */
   lookup: (
     topic: Uint8Array,
-    options?: { retry: boolean, socket: any },
+    // options?: { retry: boolean, socket: any },
   ) => Query
-  defaultKeyPair: KeyPair
+  /**
+   * Announce that you are listening on a key-pair to the DHT under a specific topic.
+   */
+  announce: (topic: Uint8Array, keyPair?: KeyPair) => Query
 }
 
 export interface DHTOpts {
@@ -118,6 +130,12 @@ export interface DHTOpts {
 }
 
 export interface DHTModule {
+  /**
+   * Generate a new key pair.
+   */
   keyPair: (seed?: Uint8Array) => KeyPair
+  /**
+ n * Create a new DHT node.
+   */
   create: (opts?: DHTOpts) => Promise<DHT>
 }

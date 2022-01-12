@@ -39,11 +39,18 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
   - [x] `server.on('listening')`
   - [x] `server.on('connection')`
   - [x] `server.on('close')`
-  - [x] `node.connect() without options`
+  - [x] `node.connect({keyPair}) without optional nodes`
   - [x] `encryptedConnection.on('open')`
   - [x] `encryptedConnection.remotePublicKey`
   - [x] `encryptedConnection.publicKey`
   - [x] `encryptedConnection.end()`
+  - [x] `node.lookup(topic) without options`
+  - [x] `node.announce(topic,keyPair) without relayAddresses or options`
+  - [ ] `node.unannounce`
+  - [ ] `node.immutablePut(value)`
+  - [ ] `node.immutableGet(value)`
+  - [ ] `node.mutablePut(value)`
+  - [ ] `node.mutableGet(value)`
 
 - Passing in Relay
 
@@ -64,3 +71,10 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
   - [ ] `encryptedConnection.remotePublicKey`
   - [ ] `encryptedConnection.publicKey`
   - [ ] `encryptedConnection.end()`
+  - [ ] `node.lookup(topic) without options`
+  - [ ] `node.announce(topic,keyPair) without relayAddresses or options`
+  - [ ] `node.unannounce`
+  - [ ] `node.immutablePut(value)`
+  - [ ] `node.immutableGet(value)`
+  - [ ] `node.mutablePut(value)`
+  - [ ] `node.mutableGet(value)`
