@@ -36,13 +36,13 @@ export interface Server extends EventEmitter {
   publicKey: Uint8Array;
   close: () => Promise<void>;
   closed: boolean;
-  on:
-    | ((
-        event: 'connection',
-        cb: (encryptedSocket: SecretStream) => void,
-      ) => this)
-    | ((event: 'close', cb: () => void) => this)
-    | ((event: 'listening', cb: () => void) => this);
+  on: ((
+    event: 'connection',
+    listener: (encryptedSocket: SecretStream) => void,
+  ) => this) &
+    ((event: 'listening', listener: () => void) => this) &
+    ((event: 'close', listener: () => void) => this) &
+    ((event: string | symbol, listener: (...args: any[]) => void) => this);
 }
 
 export interface HandshakePayload {
@@ -56,11 +56,11 @@ export interface HandshakePayload {
 }
 
 export interface ServerOpts {
-  onconnection?: Server['on'];
-  firewall: (
+  onconnection?: (encryptedSocket: SecretStream) => void;
+  firewall?: (
     remotePublicKey: Uint8Array,
     remoteHandshakePayload: HandshakePayload,
-  ) => Promise<boolean>;
+  ) => boolean | Promise<boolean>;
 }
 
 export interface DHTNode {

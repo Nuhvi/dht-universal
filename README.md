@@ -25,14 +25,32 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
 
 ### Covered by tests and type definitions:
 
-Node
+- Tested in normal DHT
 
-- [x] Instantiation
-- [x] `DHT.keyPair([seed])`
-- [x] `node.destroy([opts])`
+  - [x] Instantiation
+  - [x] `DHT.keyPair([seed])`
+  - [x] `node.defaultKeyPair`
+  - [x] `node.createServer()`
+  - [x] `node.destroy([opts])`
+  - [x] `server.publicKey`
+  - [x] `server.address()`
+  - [x] `server.listen()`
+  - [x] `server.close()`
+  - [x] `server.on('listening')`
+  - [x] `server.on('connection')`
+  - [x] `server.on('close')`
 
-Browser
+- Passing in Relay
 
-- [ ] Instantiation
-- [ ] `DHT.keyPair([seed])`
-- [ ] `node.destroy([opts])`
+  - [ ] Instantiation
+  - [ ] `DHT.keyPair([seed])`
+  - [ ] `node.defaultKeyPair`
+  - [ ] `node.createServer()`
+  - [ ] `node.destroy([opts])`
+  - [ ] `server.publicKey`
+  - [ ] `server.address()`
+  - [ ] `server.listen()`
+  - [ ] `server.close()`
+  - [ ] `server.on('listening')`
+  - [ ] `server.on('connection')`
+  - [ ] `server.on('close')`

@@ -1,4 +1,5 @@
 import { expect } from 'aegir/utils/chai.js';
+import crypto from 'hypercore-crypto';
 import b4a from 'b4a';
 
 /**
@@ -13,16 +14,7 @@ export const test = (DHT) => {
     'hex',
   );
 
-  const keyPair = {
-    publicKey: b4a.from(
-      'd04ab232742bb4ab3a1368bd4615e4e6d0224ab71a016baf8520a332c9778737',
-      'hex',
-    ),
-    secretKey: b4a.from(
-      '1111111111111111111111111111111111111111111111111111111111111111d04ab232742bb4ab3a1368bd4615e4e6d0224ab71a016baf8520a332c9778737',
-      'hex',
-    ),
-  };
+  const keyPair = crypto.keyPair(b4a.from('1'.repeat(64), 'hex'));
 
   let nodes = [];
 
@@ -63,9 +55,9 @@ export const test = (DHT) => {
       });
     });
 
-    describe('node.destroy', () => {
+    describe('node.destroy()', () => {
       it('should destroy node and close servers', async () => {
-        const node = await createNode({ keyPair });
+        const node = await DHT.create();
         const server = node.createServer();
         await server.listen();
 
@@ -79,7 +71,7 @@ export const test = (DHT) => {
       });
 
       it('should force destroy node and skip close servers', async () => {
-        const node = await createNode({ keyPair });
+        const node = await DHT.create();
         const server = node.createServer();
         await server.listen();
 
@@ -90,6 +82,217 @@ export const test = (DHT) => {
 
         expect(server.closed).to.be.false();
         expect(node.destroyed).to.be.true();
+
+        server.close();
+      });
+    });
+
+    describe('node.createServer', () => {
+      it('should create a server and accept an onconnection callback', async () => {
+        const node1 = await createNode();
+
+        const opened = await new Promise(async (resolve, reject) => {
+          const server = node1.createServer((secretStream) => {
+            secretStream.on('open', () => resolve(true));
+            secretStream.on('data', (data) =>
+              expect(data.toString()).to.equal('hello'),
+            );
+          });
+
+          await server.listen();
+
+          const node2 = await createNode();
+          const secretStream = node2.connect(server.publicKey);
+          secretStream.on('error', () => reject(error));
+          secretStream.on('open', () => secretStream.write('hello'));
+        });
+
+        expect(opened).to.be.true();
+      });
+
+      it('should create a server and accept a firewall function', async () => {
+        const node1 = await createNode();
+        const node2 = await createNode();
+
+        const firewalled = await new Promise(async (resolve, reject) => {
+          const server = node1.createServer({
+            firewall: (remotePublicKey, remoteHandshakePayload) => {
+              expect(remotePublicKey).to.eql(node2.defaultKeyPair.publicKey);
+              expect(remoteHandshakePayload).to.eql({
+                version: 1,
+                error: 0,
+                firewall: 0,
+                protocols: 3,
+                holepunch: null,
+                addresses: [],
+              });
+
+              resolve(true);
+              return true;
+            },
+            onconnection: (secretStream) => resolve(false),
+          });
+
+          await server.listen();
+
+          const secretStream = node2.connect(server.publicKey);
+          secretStream.on('error', () => reject(error));
+          secretStream.on('open', () => resolve(false));
+        });
+
+        expect(firewalled).to.be.true();
+      });
+    });
+
+    describe('server.close()', () => {
+      it('should close the server and keep the node running', async () => {
+        const node = await DHT.create({ keyPair });
+        const server = node.createServer();
+        await server.listen();
+
+        expect(server.closed).to.be.false();
+        expect(node.destroyed).to.be.false();
+
+        await server.close();
+
+        expect(server.closed).to.be.true();
+        expect(node.destroyed).to.be.false();
+
+        await node.destroy();
+        expect(node.destroyed).to.be.true();
+      });
+    });
+
+    describe('server.listen()', () => {
+      it('should listen on the same keyPair as node.defaultKeypair', async () => {
+        const node1 = await createNode();
+
+        const opened = await new Promise(async (resolve, reject) => {
+          const server = node1.createServer((secretStream) => {
+            secretStream.on('open', () => resolve(true));
+            secretStream.on('data', (data) =>
+              expect(data.toString()).to.equal('hello'),
+            );
+          });
+
+          await server.listen();
+
+          expect(server.publicKey).to.eql(node1.defaultKeyPair.publicKey);
+
+          const node2 = await createNode();
+          const secretStream = node2.connect(server.publicKey);
+          secretStream.on('error', () => reject(error));
+          secretStream.on('open', () => secretStream.write('hello'));
+        });
+
+        expect(opened).to.be.true();
+      });
+
+      it('should listen on another keyPair than the node.defaultKeypair', async () => {
+        const node1 = await createNode({ keyPair });
+
+        const opened = await new Promise(async (resolve, reject) => {
+          const server = node1.createServer((secretStream) => {
+            secretStream.on('open', () => resolve(true));
+            secretStream.on('data', (data) =>
+              expect(data.toString()).to.equal('hello'),
+            );
+          });
+
+          const customKeyPair = crypto.keyPair(b4a.from('f'.repeat(64), 'hex'));
+
+          await server.listen(customKeyPair);
+
+          expect(server.publicKey).to.eql(customKeyPair.publicKey);
+          expect(server.publicKey).to.not.eql(node1.defaultKeyPair.publicKey);
+
+          const node2 = await createNode();
+          const secretStream = node2.connect(server.publicKey);
+          secretStream.on('error', () => reject(error));
+          secretStream.on('open', () => secretStream.write('hello'));
+        });
+
+        expect(opened).to.be.true();
+      });
+    });
+
+    describe('server.on()', () => {
+      it('should emit event "connection"', async () => {
+        const node1 = await createNode();
+
+        const opened = await new Promise(async (resolve, reject) => {
+          const server = node1.createServer((secretStream) => {
+            secretStream.on('open', () => resolve(true));
+            secretStream.on('data', (data) =>
+              expect(data.toString()).to.equal('hello'),
+            );
+          });
+
+          await server.listen();
+
+          expect(server.publicKey).to.eql(node1.defaultKeyPair.publicKey);
+
+          const node2 = await createNode();
+          const secretStream = node2.connect(server.publicKey);
+          secretStream.on('error', () => reject(error));
+          secretStream.on('open', () => secretStream.write('hello'));
+        });
+
+        expect(opened).to.be.true();
+      });
+
+      it('should emit event "listening"', async () => {
+        const node1 = await createNode();
+
+        const listening = await new Promise(async (resolve, reject) => {
+          const server = node1.createServer();
+
+          server.on('listening', () => {
+            resolve(true);
+          });
+
+          await server.listen();
+        });
+
+        expect(listening).to.be.true();
+      });
+
+      it('should emit event "close"', async () => {
+        const node1 = await createNode();
+
+        const server = node1.createServer();
+        await server.listen();
+
+        const closing = await new Promise(async (resolve, reject) => {
+          server.on('close', () => resolve(true));
+          server.close();
+        });
+
+        expect(closing).to.be.true();
+      });
+    });
+
+    describe('server.address()', () => {
+      it('should return correct address interface', async () => {
+        const node1 = await createNode({ keyPair });
+        const server = node1.createServer();
+        await server.listen();
+
+        const address = server.address();
+
+        expect(typeof address.host).to.equal('string');
+        expect(typeof address.port).to.equal('number');
+        expect(address.publicKey).to.equal(keyPair.publicKey);
+      });
+    });
+
+    describe('server.publicKey', () => {
+      it("should return the server's publicKey", async () => {
+        const node1 = await createNode({ keyPair });
+        const server = node1.createServer();
+        await server.listen();
+
+        expect(server.publicKey).to.equal(keyPair.publicKey);
       });
     });
 
