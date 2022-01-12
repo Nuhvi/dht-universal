@@ -39,6 +39,11 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
   - [x] `server.on('listening')`
   - [x] `server.on('connection')`
   - [x] `server.on('close')`
+  - [x] `node.connect() without options`
+  - [x] `encryptedConnection.on('open')`
+  - [x] `encryptedConnection.remotePublicKey`
+  - [x] `encryptedConnection.publicKey`
+  - [x] `encryptedConnection.end()`
 
 - Passing in Relay
 
@@ -54,3 +59,8 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
   - [ ] `server.on('listening')`
   - [ ] `server.on('connection')`
   - [ ] `server.on('close')`
+  - [ ] `node.connect() without options`
+  - [ ] `encryptedConnection.on('open')`
+  - [ ] `encryptedConnection.remotePublicKey`
+  - [ ] `encryptedConnection.publicKey`
+  - [ ] `encryptedConnection.end()`

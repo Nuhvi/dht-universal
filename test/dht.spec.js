@@ -1,4 +1,4 @@
-import { DHT } from '../src/dht.js';
-import { test } from './api.spec.js';
+import { DHT } from '../src/dht.js'
+import { test } from './api.spec.js'
 
-test(DHT);
+test(DHT)

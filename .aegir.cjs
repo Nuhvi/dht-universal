@@ -10,6 +10,9 @@ module.exports = {
 
       const server = node.createServer();
       await server.listen();
+      server.on('connection', (socket) => {
+        socket.write('hello');
+      });
 
       return {
         node,
