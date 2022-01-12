@@ -1,6 +1,6 @@
 # dht-universal
 
-Universal wrapper for @hyperswarm/dht and @hyperswarm/dht-relay working in Node.js and the Browser
+Universal wrapper for `@hyperswarm/dht` and `@hyperswarm/dht-relay` working in Node.js and the Browser
 
 ## Installation
 
@@ -13,10 +13,26 @@ npm install dht-universal
 ```js
 import { DHT } from 'dht-universal/dht'; // mind the /dht after the package name
 
-const node = await DHT();
+const node = await DHTcreate();
 
 const anotherNode = await DHT();
 const noiseSocket = anotherNode.connect(node2.defaultKeyPair.publicKey);
+```
+
+### Browser
+
+In browser, it will use the `@hyperswarm/dht-relay` with a `WebSocket` transport, and a default set of relays
+
+### Custom relays
+
+You can also pass a custom set of relays to the `DHT.create()` function.
+
+```js
+import { DHT } from 'dht-universal/dht'; // mind the /dht after the package name
+
+const node = await DHT.create({
+  relays: ['wss://dht-relay1.example.com/', 'wss://dht-relay2.example.com/'],
+});
 ```
 
 ## API

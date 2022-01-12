@@ -4,8 +4,9 @@ import { DHT as DHTRelayed } from './dht.browser.js'
 /** @type {DHTModule} */
 export const DHT = {
   keyPair: DHTNode.keyPair,
-  // @ts-ignore
-  create: async (opts) => (opts?.relays ? DHTRelayed(opts) : new DHTNode(opts))
+  create: async (opts) =>
+    // @ts-ignore
+    opts?.relays ? DHTRelayed.create(opts) : new DHTNode(opts)
 }
 
 /**
