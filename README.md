@@ -13,10 +13,13 @@ npm install dht-universal
 ```js
 import { DHT } from 'dht-universal/dht'; // mind the /dht after the package name
 
-const node = await DHTcreate();
+const node = new DHT();
 
-const anotherNode = await DHT();
+const anotherNode = new DHT();
 const noiseSocket = anotherNode.connect(node2.defaultKeyPair.publicKey);
+
+// And use static methods
+DHT.keyPair(seed);
 ```
 
 ### Browser
@@ -30,7 +33,7 @@ You can also pass a custom set of relays to the `DHT.create()` function.
 ```js
 import { DHT } from 'dht-universal/dht'; // mind the /dht after the package name
 
-const node = await DHT.create({
+const node = new DHT({
   relays: ['wss://dht-relay1.example.com/', 'wss://dht-relay2.example.com/'],
 });
 ```
@@ -43,9 +46,11 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
 
 - Tested in normal DHT
 
-  - [x] Instantiation
   - [x] `DHT.keyPair([seed])`
+  - [x] Instantiation
   - [x] `node.defaultKeyPair`
+  - [x] `node.destroyed`
+  - [x] `node.ready()`
   - [x] `node.createServer()`
   - [x] `node.destroy([opts])`
   - [x] `server.publicKey`
@@ -70,14 +75,15 @@ Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
 
 - Passing in Relay
 
-  - [ ] Instantiation
-  - [ ] `DHT.keyPair([seed])`
-  - [ ] `node.defaultKeyPair`
-  - [ ] `node.createServer()`
-  - [ ] `node.destroy([opts])`
-  - [ ] `server.publicKey`
+  - [ ] Websocket Relays
+  - [x] `DHT.keyPair([seed])`
+  - [x] `DHT.create()`
+  - [x] `node.defaultKeyPair`
+  - [x] `node.createServer()`
+  - [x] `node.destroy([opts])`
+  - [x] `server.publicKey`
   - [ ] `server.address()`
-  - [ ] `server.listen()`
+  - [x] `server.listen()`
   - [ ] `server.close()`
   - [ ] `server.on('listening')`
   - [ ] `server.on('connection')`

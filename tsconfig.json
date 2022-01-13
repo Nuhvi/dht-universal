@@ -4,5 +4,5 @@
     "outDir": "types",
     "module": "es2020"
   },
-  "include": ["src", "package.json", "vendor"]
+  "include": ["src", "package.json"]
 }

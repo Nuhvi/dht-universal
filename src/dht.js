@@ -1,15 +1,19 @@
-import DHTNode from '@hyperswarm/dht'
-import { DHT as DHTRelayed } from './dht.browser.js'
+import DHTNode from '@hyperswarm/dht';
+// import { DHT as DHTRelayed } from './dht.browser.js';
 
-/** @type {DHTModule} */
-export const DHT = {
-  keyPair: DHTNode.keyPair,
-  create: async (opts) =>
-    // @ts-ignore
-    opts?.relays ? DHTRelayed.create(opts) : new DHTNode(opts)
+/** @type {_DHT} */
+export class DHT extends DHTNode {
+  /** @param {DHTOpts} opts */
+  constructor(opts) {
+    // if (opts?.relays) {
+    // return DHTRelayed.create(opts);
+    // } else {
+    super(opts);
+    // }
+  }
 }
 
 /**
- * @typedef {import('./interfaces').DHTModule } DHTModule
- * @typedef {import('./interfaces').DHT} DHT
+ * @typedef {import('./interfaces').DHT} _DHT
+ * @typedef {import('./interfaces').DHTOpts} DHTOpts
  */

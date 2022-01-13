@@ -3,7 +3,7 @@ import crypto from 'hypercore-crypto';
 import b4a from 'b4a';
 
 /**
- * @param {import ('../src/interfaces').DHTModule} DHT
+ * @param {import ('../src/interfaces').DHT} DHT
  */
 export const test = (DHT) => {
   const VALID_RLAY_SERVER = 'wss://dht-relay.synonym.to/';
@@ -27,29 +27,16 @@ export const test = (DHT) => {
    * @param {import('../src/interfaces').DHTOpts} [opts]
    */
   const createNode = async (opts) => {
-    const node = await DHT.create(opts);
+    const node = new DHT(opts);
     nodes.push(node);
+    // await node.ready();
     return node;
   };
 
-  const cleanNodes = async () => {
-    await Promise.all(
-      nodes.map((node) => {
-        return node.destroy();
-      }),
-    );
-  };
+  const cleanNodes = async () =>
+    Promise.all(nodes.map((node) => node.ready().then((_) => node.destroy())));
 
-  describe('API', () => {
-    after(cleanNodes);
-
-    describe('create options', () => {
-      it('should accept a defaultKeyPair', async () => {
-        const node = await createNode({ keyPair });
-        expect(node.defaultKeyPair).to.eql(keyPair);
-      });
-    });
-
+  describe('Static methods', () => {
     describe('DHT.keyPair', () => {
       it('should create a keyPair without a seed', () => {
         const keyPair = DHT.keyPair();
@@ -61,34 +48,47 @@ export const test = (DHT) => {
         expect(_keyPair).to.eql(keyPair);
       });
     });
+  });
+
+  describe('API', () => {
+    after(cleanNodes);
+
+    describe('Instantiation', () => {
+      it('should accept a defaultKeyPair', async () => {
+        const node = await createNode({ keyPair });
+        expect(node.defaultKeyPair.publicKey).to.eql(keyPair.publicKey);
+      });
+    });
 
     describe('node.destroy()', () => {
       it('should destroy node and close servers', async () => {
-        const node = await DHT.create();
+        const node = await createNode();
+        await node.ready();
         const server = node.createServer();
         await server.listen();
 
-        expect(server.closed).to.be.false();
-        expect(node.destroyed).to.be.false();
+        expect(server.closed).to.be.false('server should not be closed');
+        expect(node.destroyed).to.be.false('node should not be destroyed');
 
         await node.destroy();
 
-        expect(server.closed).to.be.true();
-        expect(node.destroyed).to.be.true();
+        expect(server.closed).to.be.true('server should be closed');
+        expect(node.destroyed).to.be.true('node should be destroyed');
       });
 
       it('should force destroy node and skip close servers', async () => {
-        const node = await DHT.create();
+        const node = await createNode();
+        await node.ready();
         const server = node.createServer();
         await server.listen();
 
-        expect(server.closed).to.be.false();
-        expect(node.destroyed).to.be.false();
+        expect(server.closed).to.be.false('server should not be closed');
+        expect(node.destroyed).to.be.false('node should not be destroyed');
 
         await node.destroy({ force: true });
 
-        expect(server.closed).to.be.false();
-        expect(node.destroyed).to.be.true();
+        expect(server.closed).to.be.false('server should not be closed');
+        expect(node.destroyed).to.be.true('node should be destroyed');
 
         server.close();
       });
@@ -125,7 +125,7 @@ export const test = (DHT) => {
         ).to.be.true();
       });
 
-      it('should create a server and accept a firewall function', async () => {
+      it.skip('should create a server and accept a firewall function', async () => {
         const node1 = await createNode();
         const node2 = await createNode();
 
@@ -164,7 +164,7 @@ export const test = (DHT) => {
 
     describe('server.close()', () => {
       it('should close the server and keep the node running', async () => {
-        const node = await DHT.create({ keyPair });
+        const node = await createNode({ keyPair });
         const server = node.createServer();
         await server.listen();
 
@@ -187,7 +187,7 @@ export const test = (DHT) => {
 
         const server = node1.createServer((secretStream) => {
           secretStream.on('data', (data) =>
-            expect(data.toString()).to.equal('hello'),
+            expect(data).to.eql(b4a.from('hello')),
           );
         });
 
@@ -213,7 +213,7 @@ export const test = (DHT) => {
 
         const server = node1.createServer((secretStream) => {
           secretStream.on('data', (data) =>
-            expect(data.toString()).to.equal('hello'),
+            expect(data).to.eql(b4a.from('hello')),
           );
         });
 
@@ -437,43 +437,46 @@ export const test = (DHT) => {
 
         expect(result.length).to.be.at.least(1);
         expect(result[0].peers.length).to.be.at.least(1);
-        expect(result[0].peers[0].publicKey).to.eql(
-          node1.defaultKeyPair.publicKey,
-        );
+        expect(
+          result[0].peers.map((p) => p.publicKey.toString('hex')),
+        ).to.includes(node1.defaultKeyPair.publicKey.toString('hex'));
       });
     });
   });
 
-  describe('relay', () => {
+  describe.skip('relay', () => {
     it('should try websockets until one works', async () => {
-      const created = await new Promise((resolve) => {
+      const created = await new Promise((resolve, reject) => {
         createNode({
           keyPair,
           relays: [INVALID_RELAY_SERVER, VALID_RLAY_SERVER],
-        }).then((node) => {
-          node.destroy();
-          resolve(!!node);
-        });
+        })
+          .then((node) => {
+            console.log(node);
+            node.destroy();
+            resolve(Boolean(node));
+          })
+          .catch((error) => reject(error));
       });
 
       expect(created).to.be.true('created a node');
     });
 
     it('should throw an error if non of the relays worked', async () => {
-      const threw = await new Promise((resolve) => {
+      const threw = await new Promise((resolve, reject) => {
         createNode({
           keyPair,
           relays: [INVALID_RELAY_SERVER],
         })
           .then((node) => {
-            resolve(!node);
+            reject('Should not have created a node');
           })
-          .catch(() => {
-            resolve(true);
+          .catch((error) => {
+            resolve(error.message);
           });
       });
 
-      expect(threw).to.be.true('should have thrown an error');
+      expect(threw).to.equal('Could not connect to any of the DHT relays');
     });
   });
 };
