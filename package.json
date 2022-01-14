@@ -35,15 +35,15 @@
     }
   },
   "main": "./src/dht.js",
+  "browser": "./src/dht.browser.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/synonymdev/dht-universal.git"
   },
   "scripts": {
     "build": "rm -rf dist && aegir build",
-    "test": "npm run test:node && npm run test:browser",
-    "test:node": "aegir test -t node -f ./test/dht.spec.js",
-    "test:browser": "aegir test -f ./test/dht.browser.spec.js",
+    "test:dht": "aegir test -t node -f ./test/dht.spec.js",
+    "test:relay": "aegir test -t browser -f ./test/dht.browser.spec.js",
     "lint": "aegir ts -p check && aegir lint --fix",
     "dep-check": "aegir dep-check",
     "publish": "npm publish dist"
@@ -56,6 +56,7 @@
   "devDependencies": {
     "aegir": "^36.1.3",
     "b4a": "^1.3.1",
+    "c8": "^7.11.0",
     "hypercore-crypto": "^3.1.1"
   },
   "peerDependencies": {
@@ -68,12 +69,6 @@
     },
     "parserOptions": {
       "sourceType": "module"
-    }
-  },
-  "exports": {
-    "./dht": {
-      "import": "./src/dht.js",
-      "browser": "./src/dht.browser.js"
     }
   }
 }
