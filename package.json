@@ -1,6 +1,6 @@
 {
   "name": "dht-universal",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "Universal wrapper for @hyperswarm/dht and @hyperswarm/dht-relay working in Node.js and the Browser",
   "type": "module",
   "keywords": [
