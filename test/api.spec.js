@@ -8,18 +8,11 @@ import b4a from 'b4a'
  * @param {_DHT} DHT
  */
 export const test = (DHT) => {
-  const VALID_RELAY_SERVER = 'wss://dht-relay.synonym.to/'
   const INVALID_RELAY_SERVER = 'ws://invalid.something.net'
 
-  const DHT_KEY = b4a.from(
-    '3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29',
-    'hex'
-  )
+  const { DHT_NODE_KEY, RELAY_URL: VALID_RELAY_SERVER, TOPIC } = process.env
 
-  const topic = b4a.from(
-    '139e3940e64b5491722088d9a0d741628fc826e09475d341a780acde3c4b8070',
-    'hex'
-  )
+  const DHT_KEY = b4a.from(DHT_NODE_KEY, 'hex')
 
   const keyPair = crypto.keyPair(b4a.from('1'.repeat(64), 'hex'))
 
@@ -398,7 +391,7 @@ export const test = (DHT) => {
       it('should lookup a topic and return a stream with closestNodes', async () => {
         const node = await createNode()
 
-        const stream = node.lookup(topic)
+        const stream = node.lookup(TOPIC)
 
         await stream.finished()
 
@@ -411,7 +404,7 @@ export const test = (DHT) => {
       it('should lookup a topic and return an iterable stream', async () => {
         const node = await createNode()
 
-        const stream = node.lookup(topic)
+        const stream = node.lookup(TOPIC)
 
         const result = await toArray(stream)
 

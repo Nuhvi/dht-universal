@@ -10,35 +10,21 @@ npm install dht-universal
 
 ## Usage
 
-```js
-import { DHT } from 'dht-universal';
-
-const node = new DHT();
-
-const anotherNode = new DHT();
-const noiseSocket = anotherNode.connect(node2.defaultKeyPair.publicKey);
-
-// And use static methods
-DHT.keyPair(seed);
-```
-
-### Browser
-
-In browser, it will use the `@hyperswarm/dht-relay` with a `WebSocket` transport, and a default set of relays
+In browser, it will use the `@hyperswarm/dht-relay` with a `WebSocket` transport, so you need to pass a relay URL to the constructor, and wait for it to be ready to confirm the websocket is open.
 
 ### Custom relays
 
 ```js
 import { DHT } from 'dht-universal';
 
-const node = new DHT({
-  relay: 'wss://dht-relay1.example.com/',
-});
+const node = new DHT({ relay: 'wss://dht-relay.example.com/' });
+
+await node.ready();
 ```
 
 ## API
 
-Should be thse same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
+Should be the same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
 
 ### Covered by tests and type definitions:
 
