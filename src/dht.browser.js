@@ -4,7 +4,6 @@ import { Node } from '@hyperswarm/dht-relay'
 import ws from '@hyperswarm/dht-relay/ws'
 import WebSocket from 'isomorphic-ws'
 
-// @ts-ignore
 export class DHT extends Node {
   /** @param {DHTOpts} opts */
   constructor (opts) {
@@ -17,8 +16,4 @@ export class DHT extends Node {
 /**
  * @typedef {import('./interfaces').DHT} _DHT
  * @typedef {import('./interfaces').DHTOpts} DHTOpts
- */
-
-/**
- * @typedef {import('isomorphic-ws')} WebSocket
  */
