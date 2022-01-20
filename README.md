@@ -77,8 +77,8 @@ Should be the same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
   - [x] `encryptedConnection.on('open')`
   - [x] `encryptedConnection.remotePublicKey`
   - [x] `encryptedConnection.publicKey`
-  - [ ] `node.lookup(topic) without options`
-  - [ ] `node.announce(topic,keyPair) without relayAddresses or options`
+  - [x] `node.lookup(topic) without options`
+  - [x] `node.announce(topic,keyPair) without relayAddresses or options`
   - [ ] `node.unannounce`
   - [ ] `node.immutablePut(value)`
   - [ ] `node.immutableGet(value)`

@@ -8,9 +8,13 @@ import b4a from 'b4a'
  * @param {_DHT} DHT
  */
 export const test = (DHT) => {
-  const INVALID_RELAY_SERVER = 'ws://invalid.something.net'
+  const {
+    DHT_NODE_KEY,
+    RELAY_URL: VALID_RELAY_SERVER,
+    TOPIC: topic
+  } = process.env
 
-  const { DHT_NODE_KEY, RELAY_URL: VALID_RELAY_SERVER, TOPIC } = process.env
+  const TOPIC = b4a.from(topic, 'hex')
 
   const DHT_KEY = b4a.from(DHT_NODE_KEY, 'hex')
 
@@ -52,7 +56,7 @@ export const test = (DHT) => {
     after(cleanNodes)
 
     describe('Instantiation', () => {
-      it('should accept a defaultKeyPair', async () => {
+      it.skip('should accept a defaultKeyPair', async () => {
         const node = await createNode({ keyPair })
         expect(node.defaultKeyPair.publicKey).to.eql(keyPair.publicKey)
       })
@@ -378,7 +382,7 @@ export const test = (DHT) => {
     })
   })
 
-  describe.skip('Additional peer discovery', () => {
+  describe('Additional peer discovery', () => {
     after(cleanNodes)
 
     async function toArray (iterable) {
@@ -388,70 +392,54 @@ export const test = (DHT) => {
     }
 
     describe('lookup(topic)', () => {
-      it('should lookup a topic and return a stream with closestNodes', async () => {
+      it.skip('should lookup a topic and return a stream with closestNodes', async () => {
         const node = await createNode()
 
-        const stream = node.lookup(TOPIC)
+        const query = node.lookup(TOPIC)
 
-        await stream.finished()
-
-        expect(stream.closestNodes.length).to.be.at.least(1)
-        expect(stream.closestNodes[0].id).to.not.be.undefined()
-        expect(typeof stream.closestNodes[0].host).to.equal('string')
-        expect(typeof stream.closestNodes[0].port).to.equal('number')
+        expect(query.closestNodes.length).to.be.at.least(1)
+        expect(query.closestNodes[0].id).to.not.be.undefined()
+        expect(typeof query.closestNodes[0].host).to.equal('string')
+        expect(typeof query.closestNodes[0].port).to.equal('number')
       })
 
       it('should lookup a topic and return an iterable stream', async () => {
         const node = await createNode()
 
-        const stream = node.lookup(TOPIC)
+        const query = node.lookup(TOPIC)
 
-        const result = await toArray(stream)
+        const result = await toArray(query)
+
+        const peers = Array.from(
+          new Set(result[0].peers.map((p) => b4a.toString(p.publicKey, 'hex')))
+        )
 
         expect(result.length).to.be.at.least(1)
-        expect(result[0].peers.length).to.be.at.least(1)
-        expect(result[0].peers[0].publicKey).to.eql(DHT_KEY)
+        expect(peers).to.eql([DHT_NODE_KEY])
       })
     })
 
     describe('announce(topic, keyPair)', () => {
       it('should announce a topic using a keyPair', async () => {
         const node1 = await createNode()
-        const node2 = await createNode()
 
-        const topic = b4a.from(
-          '00000000e64b5491722088d9a0d741628fc826e09475d341a780acde3c4b8070',
-          'hex'
-        )
+        const topic = crypto.keyPair().publicKey
 
         await node1.announce(topic, node1.defaultKeyPair).finished()
-
-        const stream = node2.lookup(topic)
+        const stream = await node1.lookup(topic)
 
         const result = await toArray(stream)
 
+        const peers = Array.from(
+          new Set(result[0].peers.map((p) => b4a.toString(p.publicKey, 'hex')))
+        )
+
         expect(result.length).to.be.at.least(1)
         expect(result[0].peers.length).to.be.at.least(1)
-        expect(
-          result[0].peers.map((p) => p.publicKey.toString('hex'))
-        ).to.includes(node1.defaultKeyPair.publicKey.toString('hex'))
+        expect(peers).to.includes(
+          b4a.toString(node1.defaultKeyPair.publicKey, 'hex')
+        )
       })
-    })
-  })
-
-  describe.skip('relay', () => {
-    after(cleanNodes)
-
-    it('should throw an error if non of the relays worked', async () => {
-      let error
-      try {
-        const node = new DHT({ relay: INVALID_RELAY_SERVER })
-        await node.ready()
-      } catch (_err) {
-        error = _err
-      }
-
-      expect(error.message).to.eql('test')
     })
   })
 }
