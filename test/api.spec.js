@@ -30,9 +30,7 @@ export const test = (DHT) => {
    * @returns {Promise<_DHT>}
    */
   const createNode = async (opts) => {
-    if (process.title !== 'node') opts = { ...opts, relay: VALID_RELAY_SERVER }
-
-    const node = new DHT(opts)
+    const node = new DHT({ ...opts, relay: VALID_RELAY_SERVER })
     nodes.push(node)
     await node.ready()
     return node

@@ -35,7 +35,7 @@
     }
   },
   "main": "./src/dht.js",
-  "browser": "./src/dht.browser.js",
+  "browser": "./src/relay.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/synonymdev/dht-universal.git"
@@ -44,7 +44,7 @@
     "build": "rm -rf dist && aegir build",
     "test": "npm run test:dht && npm run test:relay",
     "test:dht": "aegir test -t node -f ./test/dht.spec.js",
-    "test:relay": "aegir test -t browser webworker -f ./test/dht.browser.spec.js",
+    "test:relay": "aegir test -f ./test/relay.spec.js",
     "lint": "aegir ts -p check && aegir lint --fix",
     "dep-check": "aegir dep-check",
     "publish": "npm publish dist"
@@ -73,7 +73,7 @@
   "exports": {
     ".": {
       "import": "./src/dht.js",
-      "browser": "./src/dht.browser.js"
+      "browser": "./src/relay.js"
     }
   }
 }
