@@ -25,7 +25,6 @@ const setupNode = async (bootstrap) => {
   await node.ready();
 
   const server = node.createServer();
-  await server.listen();
   server.on('connection', (socket) => {
     socket.write('hello');
     socket.end();
@@ -37,6 +36,7 @@ const setupNode = async (bootstrap) => {
     .digest();
 
   await node.announce(topic, node.defaultKeyPair).finished();
+  await server.listen();
 
   return {
     DHT_NODE_KEY: node.defaultKeyPair.publicKey.toString('hex'),

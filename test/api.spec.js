@@ -416,6 +416,22 @@ export const test = (DHT) => {
 
         expect(result.length).to.be.at.least(1)
         expect(peers).to.eql([DHT_NODE_KEY])
+
+        const secretStream = node.connect(DHT_KEY)
+
+        await new Promise((resolve) => {
+          secretStream.on('open', () => {
+            expect(secretStream.remotePublicKey).to.eql(DHT_KEY)
+            expect(secretStream.publicKey).to.eql(
+              node.defaultKeyPair.publicKey
+            )
+
+            secretStream.on('data', (data) => {
+              expect(data).to.eql(b4a.from('hello'))
+              resolve()
+            })
+          })
+        })
       })
     })
 
