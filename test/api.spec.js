@@ -1,5 +1,7 @@
 import { expect } from 'aegir/utils/chai.js'
 import crypto from 'hypercore-crypto'
+import ram from 'random-access-memory'
+import Hypercore from 'hypercore'
 import b4a from 'b4a'
 
 /** @typedef {import ('../src/interfaces').DHT} _DHT */
@@ -11,7 +13,8 @@ export const test = (DHT) => {
   const {
     DHT_NODE_KEY,
     RELAY_URL: VALID_RELAY_SERVER,
-    TOPIC: topic
+    TOPIC: topic,
+    CORE_KEY
   } = process.env
 
   const TOPIC = b4a.from(topic, 'hex')
@@ -31,7 +34,7 @@ export const test = (DHT) => {
 
     const node = new DHT(opts)
     nodes.push(node)
-    // await node.ready();
+    await node.ready()
     return node
   }
 
@@ -425,13 +428,48 @@ export const test = (DHT) => {
             expect(secretStream.publicKey).to.eql(
               node.defaultKeyPair.publicKey
             )
-
-            secretStream.on('data', (data) => {
-              expect(data).to.eql(b4a.from('hello'))
-              resolve()
-            })
+          })
+          secretStream.on('data', (data) => {
+            expect(data).to.eql(b4a.from('hello'))
+            resolve()
           })
         })
+      })
+
+      it('should replicate Hypercore', async () => {
+        const node = await createNode()
+
+        const core = new Hypercore(ram, b4a.from(CORE_KEY, 'hex'), {
+          valueEncoding: 'json'
+        })
+        await core.ready()
+
+        const query = node.lookup(core.discoveryKey)
+
+        const connections = new Map()
+
+        for await (const { peers } of query) {
+          peers.forEach((peer) => {
+            const pubKeyString = b4a.toString(peer.publicKey, 'hex')
+            if (!connections.has(pubKeyString)) {
+              const connection = node.connect(peer.publicKey)
+              connections.set(pubKeyString, connection)
+            }
+          })
+        }
+        /** @type {import ('stream').Duplex} */
+        const replicateStream = core.replicate(true)
+
+        for (const connection of connections.values()) {
+          connection.on('error', () => {})
+          connection.pipe(replicateStream).pipe(connection)
+        }
+
+        await core.update()
+        const data = await core.get(core.length - 1)
+        expect(data).to.eql({ foo: 'bar' })
+
+        replicateStream.destroy()
       })
     })
 

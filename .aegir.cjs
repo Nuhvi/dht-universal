@@ -4,6 +4,8 @@ const { Relay } = require('@hyperswarm/dht-relay');
 const ws = require('@hyperswarm/dht-relay/ws');
 const { WebSocketServer } = require('isomorphic-ws');
 const DHT = require('@hyperswarm/dht');
+const ram = require('random-access-memory');
+const Hypercore = require('hypercore');
 
 const setupBootstrap = async () => {
   const nodes = [new DHT({ bootstrap: [] }), new DHT({ bootstrap: [] })];
@@ -45,6 +47,31 @@ const setupNode = async (bootstrap) => {
   };
 };
 
+const setupCore = async (bootstrap) => {
+  const node = new DHT({ ephemeral: true });
+  await node.ready();
+
+  const core = new Hypercore(ram, { valueEncoding: 'json' });
+  await core.ready();
+
+  await core.append({ foo: 'bar' });
+  const replicateStream = core.replicate(false);
+
+  const server = node.createServer();
+  server.on('connection', (socket) => {
+    socket.on('error', (error) => console.log(error.message));
+    socket.pipe(replicateStream).pipe(socket);
+  });
+
+  await node.announce(core.discoveryKey, node.defaultKeyPair).finished();
+  await server.listen();
+
+  return {
+    CORE_KEY: core.key.toString('hex'),
+    closeCoreNode: () => node.destroy(),
+  };
+};
+
 const setupRelay = async (bootstrap) => {
   const dht = new DHT();
   await dht.ready();
@@ -64,22 +91,26 @@ module.exports = {
     async before(options) {
       // const { bootstrap, closeBootstrap } = await setupBootstrap();
       const { DHT_NODE_KEY, TOPIC, closeNode } = await setupNode();
+      const { CORE_KEY, closeCoreNode } = await setupCore();
       const { RELAY_URL, closeRelay } = await setupRelay();
 
       return {
         closeNode,
         closeRelay,
+        closeCoreNode,
         // closeBootstrap,
         env: {
           DHT_NODE_KEY,
           TOPIC,
           RELAY_URL,
+          CORE_KEY,
         },
       };
     },
     async after(options, before) {
       await before.closeNode();
       await before.closeRelay();
+      await before.closeCoreNode();
       // await before.closeBootstrap();
     },
   },
