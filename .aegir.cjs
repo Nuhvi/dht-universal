@@ -6,17 +6,22 @@ const { WebSocketServer } = require('isomorphic-ws');
 const DHT = require('@hyperswarm/dht');
 
 const setupBootstrap = async () => {
-  const node = new DHT({ bootstrap: false });
-  await node.ready();
+  const nodes = [new DHT({ bootstrap: [] }), new DHT({ bootstrap: [] })];
+
+  await Promise.all(nodes.map((node) => node.ready()));
+
   return {
-    bootstrap: [{ host: '127.0.0.1', port: node.address().port }],
-    closeBootstrap: () => node.destroy(),
+    bootstrap: nodes.map((n) => ({
+      host: '127.0.0.1',
+      port: n.address().port,
+    })),
+    closeBootstrap: () => Promise.all(nodes.map((n) => n.destroy())),
   };
 };
 
 const setupNode = async (bootstrap) => {
   const keyPair = DHT.keyPair(Buffer.from('0'.repeat(64), 'hex'));
-  const node = new DHT({ keyPair });
+  const node = new DHT({ keyPair, ephemeral: true });
   await node.ready();
 
   const server = node.createServer();
@@ -41,7 +46,7 @@ const setupNode = async (bootstrap) => {
 };
 
 const setupRelay = async (bootstrap) => {
-  const dht = new DHT({ bootstrap });
+  const dht = new DHT();
   await dht.ready();
 
   const relay = Relay.fromTransport(ws, dht, new WebSocketServer({ port: 0 }));
@@ -75,7 +80,7 @@ module.exports = {
     async after(options, before) {
       await before.closeNode();
       await before.closeRelay();
-      await before.closeBootstrap();
+      // await before.closeBootstrap();
     },
   },
 };

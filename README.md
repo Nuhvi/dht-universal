@@ -62,16 +62,16 @@ Should be the same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
   - [ ] `throw error on invalid relay`
   - [x] `DHT.keyPair([seed])`
   - [x] `DHT.create()`
-  - [x] `node.defaultKeyPair`
+  - [ ] `node.defaultKeyPair`
   - [x] `node.createServer()`
   - [ ] `node.createServer() with firewall`
-  - [x] `node.destroy([opts])`
-  - [x] `server.publicKey`
+  - [ ] `node.destroy([opts])`
+  - [ ] `server.publicKey`
   - [x] `server.address()`
   - [x] `server.listen()`
-  - [x] `server.close()`
+  - [ ] `server.close()`
   - [x] `server.on('listening')`
-  - [x] `server.on('connection')`
+  - [ ] `server.on('connection')`
   - [x] `server.on('close')`
   - [x] `node.connect() without options`
   - [x] `encryptedConnection.on('open')`

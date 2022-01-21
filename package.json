@@ -44,7 +44,7 @@
     "build": "rm -rf dist && aegir build",
     "test": "npm run test:dht && npm run test:relay",
     "test:dht": "aegir test -t node -f ./test/dht.spec.js",
-    "test:relay": "aegir test -t browser -f ./test/dht.browser.spec.js",
+    "test:relay": "aegir test -t browser webworker -f ./test/dht.browser.spec.js",
     "lint": "aegir ts -p check && aegir lint --fix",
     "dep-check": "aegir dep-check",
     "publish": "npm publish dist"
