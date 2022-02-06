@@ -1,10 +1,13 @@
 import { expect } from 'aegir/utils/chai.js'
 import crypto from 'hypercore-crypto'
 import ram from 'random-access-memory'
-import Hypercore from 'hypercore'
+import Hyperswarm from 'hyperswarm'
+import Corestore from 'corestore'
 import b4a from 'b4a'
 
 /** @typedef {import ('../src/interfaces').DHT} _DHT */
+
+const INVALID_RELAY_SERVER = 'wss://dht-relay.example.com'
 
 /**
  * @param {_DHT} DHT
@@ -14,7 +17,8 @@ export const test = (DHT) => {
     DHT_NODE_KEY,
     RELAY_URL: VALID_RELAY_SERVER,
     TOPIC: topic,
-    CORE_KEY
+    CORE_KEY,
+    BOOTSTRAP
   } = process.env
 
   const TOPIC = b4a.from(topic, 'hex')
@@ -23,16 +27,21 @@ export const test = (DHT) => {
 
   const keyPair = crypto.keyPair(b4a.from('1'.repeat(64), 'hex'))
 
+  const bootstrap = JSON.parse(BOOTSTRAP)
+
   const nodes = []
 
   /**
-   * @param {import('../src/interfaces').DHTOpts} [opts]
+   * @param {import('../src/interfaces').DHTOpts & {relays: string[]}} [opts]
    * @returns {Promise<_DHT>}
    */
   const createNode = async (opts) => {
-    const node = new DHT({ ...opts, relay: VALID_RELAY_SERVER })
+    const node = await DHT.create({
+      relays: [VALID_RELAY_SERVER],
+      bootstrap,
+      ...opts
+    })
     nodes.push(node)
-    await node.ready()
     return node
   }
 
@@ -57,7 +66,7 @@ export const test = (DHT) => {
     after(cleanNodes)
 
     describe('Instantiation', () => {
-      it.skip('should accept a defaultKeyPair', async () => {
+      it('should accept a defaultKeyPair', async () => {
         const node = await createNode({ keyPair })
         expect(node.defaultKeyPair.publicKey).to.eql(keyPair.publicKey)
       })
@@ -128,7 +137,7 @@ export const test = (DHT) => {
         ).to.be.true()
       })
 
-      it.skip('should create a server and accept a firewall function', async () => {
+      it('should create a server and accept a firewall function', async () => {
         const node1 = await createNode()
         const node2 = await createNode()
 
@@ -185,7 +194,7 @@ export const test = (DHT) => {
     })
 
     describe('server.listen()', () => {
-      it.skip('should listen on the same keyPair as node.defaultKeypair', async () => {
+      it('should listen on the same keyPair as node.defaultKeypair', async () => {
         const node1 = await createNode()
 
         const server = node1.createServer((secretStream) => {
@@ -243,7 +252,7 @@ export const test = (DHT) => {
     })
 
     describe('server.on()', () => {
-      it.skip('should emit event "connection"', async () => {
+      it('should emit event "connection"', async () => {
         const node1 = await createNode()
 
         const server = node1.createServer((secretStream) => {
@@ -315,7 +324,7 @@ export const test = (DHT) => {
       })
     })
 
-    describe.skip('server.publicKey', () => {
+    describe('server.publicKey', () => {
       it("should return the server's publicKey", async () => {
         const node1 = await createNode({ keyPair })
         const server = node1.createServer()
@@ -393,17 +402,6 @@ export const test = (DHT) => {
     }
 
     describe('lookup(topic)', () => {
-      it.skip('should lookup a topic and return a stream with closestNodes', async () => {
-        const node = await createNode()
-
-        const query = node.lookup(TOPIC)
-
-        expect(query.closestNodes.length).to.be.at.least(1)
-        expect(query.closestNodes[0].id).to.not.be.undefined()
-        expect(typeof query.closestNodes[0].host).to.equal('string')
-        expect(typeof query.closestNodes[0].port).to.equal('number')
-      })
-
       it('should lookup a topic and return an iterable stream', async () => {
         const node = await createNode()
 
@@ -433,42 +431,6 @@ export const test = (DHT) => {
           })
         })
       })
-
-      it('should replicate Hypercore', async () => {
-        const node = await createNode()
-
-        const core = new Hypercore(ram, b4a.from(CORE_KEY, 'hex'), {
-          valueEncoding: 'json'
-        })
-        await core.ready()
-
-        const query = node.lookup(core.discoveryKey)
-
-        const connections = new Map()
-
-        for await (const { peers } of query) {
-          peers.forEach((peer) => {
-            const pubKeyString = b4a.toString(peer.publicKey, 'hex')
-            if (!connections.has(pubKeyString)) {
-              const connection = node.connect(peer.publicKey)
-              connections.set(pubKeyString, connection)
-            }
-          })
-        }
-        /** @type {import ('stream').Duplex} */
-        const replicateStream = core.replicate(true)
-
-        for (const connection of connections.values()) {
-          connection.on('error', () => {})
-          connection.pipe(replicateStream).pipe(connection)
-        }
-
-        await core.update()
-        const data = await core.get(core.length - 1)
-        expect(data).to.eql({ foo: 'bar' })
-
-        replicateStream.destroy()
-      })
     })
 
     describe('announce(topic, keyPair)', () => {
@@ -492,6 +454,98 @@ export const test = (DHT) => {
           b4a.toString(node1.defaultKeyPair.publicKey, 'hex')
         )
       })
+    })
+  })
+
+  describe('Hyperswarm', () => {
+    it('should be able to replicate a hypercore over hyperswarm with dht-universal', async () => {
+      const dht = await createNode({
+        // Make sure it works in the integration test, and not just suppress errors.
+        relays: [INVALID_RELAY_SERVER, VALID_RELAY_SERVER]
+      })
+      const store = new Corestore(ram)
+      await store.ready()
+      const swarm = new Hyperswarm({ dht })
+
+      const sockets = []
+
+      swarm.on('connection', (socket, info) => {
+        sockets.push(socket)
+        store.replicate(socket)
+      })
+
+      const core = store.get({
+        key: Buffer.from(CORE_KEY, 'hex'),
+        valueEncoding: 'json'
+      })
+      await core.ready()
+
+      swarm.join(core.discoveryKey, {
+        server: false,
+        client: true
+      })
+
+      await swarm.flush()
+
+      await core.update()
+
+      expect(core.length).to.eql(2)
+
+      const tail = await core.get(core.length - 1)
+
+      expect(tail).to.eql({ foo: 'bar' })
+
+      await swarm.destroy()
+    })
+  })
+
+  describe('static create()', () => {
+    if (process.title !== 'browser') return
+
+    it('should throw and error in browser if no relays were passed', async () => {
+      let err
+      try {
+        await DHT.create({ relays: [] })
+      } catch (error) {
+        err = error
+      }
+
+      expect(err).to.be.instanceOf(Error)
+      expect(err.message).to.equal(
+        'DHT relays must be provided in browser environment'
+      )
+    })
+
+    it('should try relays until one is opened', async () => {
+      let err, node
+
+      try {
+        node = await DHT.create({
+          relays: [INVALID_RELAY_SERVER, VALID_RELAY_SERVER]
+        })
+      } catch (error) {
+        err = error
+      }
+
+      expect(err).to.be.undefined()
+      node.destroy()
+    })
+
+    it('should throw an error if none of the relays opened', async () => {
+      let err
+
+      try {
+        await DHT.create({
+          relays: [INVALID_RELAY_SERVER]
+        })
+      } catch (error) {
+        err = error
+      }
+
+      expect(err).to.be.instanceOf(Error)
+      expect(err.message).to.equal(
+        'Could not connect to any of the provided relays'
+      )
     })
   })
 }

@@ -1,29 +1,39 @@
 'use strict';
 const crypto = require('crypto');
-const { Relay } = require('@hyperswarm/dht-relay');
-const ws = require('@hyperswarm/dht-relay/ws');
 const { WebSocketServer } = require('isomorphic-ws');
-const DHT = require('@hyperswarm/dht');
 const ram = require('random-access-memory');
-const Hypercore = require('hypercore');
+const DHT = require('@hyperswarm/dht');
+const { relay } = require('@hyperswarm/dht-relay');
+const Stream = require('@hyperswarm/dht-relay/ws');
+const Hyperswarm = require('hyperswarm');
+const Corestore = require('corestore');
+const path = require('path');
+
+const esbuild = {
+  inject: [path.join(__dirname, './scripts/node-globals.js')],
+};
 
 const setupBootstrap = async () => {
-  const nodes = [new DHT({ bootstrap: [] }), new DHT({ bootstrap: [] })];
+  const node = new DHT({ ephemeral: true, bootstrap: [] });
+  await node.ready();
 
-  await Promise.all(nodes.map((node) => node.ready()));
+  const nodes = [node];
+
+  const bootstrap = [{ host: '127.0.0.1', port: node.address().port }];
+
+  for (let i = 1; i < 4; i++) {
+    const dht = (nodes[i] = new DHT({ ephemeral: false, bootstrap }));
+    await dht.ready();
+  }
 
   return {
-    bootstrap: nodes.map((n) => ({
-      host: '127.0.0.1',
-      port: n.address().port,
-    })),
-    closeBootstrap: () => Promise.all(nodes.map((n) => n.destroy())),
+    bootstrap,
+    closeBootstrap: () => Promise.all(nodes.map((node) => node.destroy())),
   };
 };
 
 const setupNode = async (bootstrap) => {
-  const keyPair = DHT.keyPair(Buffer.from('0'.repeat(64), 'hex'));
-  const node = new DHT({ keyPair, ephemeral: true });
+  const node = new DHT({ bootstrap });
   await node.ready();
 
   const server = node.createServer();
@@ -48,58 +58,78 @@ const setupNode = async (bootstrap) => {
 };
 
 const setupCore = async (bootstrap) => {
-  const node = new DHT({ ephemeral: true });
+  const node = new DHT({ bootstrap });
   await node.ready();
+  const swarm = new Hyperswarm({ dht: node });
 
-  const core = new Hypercore(ram, { valueEncoding: 'json' });
-  await core.ready();
+  const store = new Corestore(ram);
+  await store.ready();
 
-  await core.append({ foo: 'bar' });
-  const replicateStream = core.replicate(false);
-
-  const server = node.createServer();
-  server.on('connection', (socket) => {
-    socket.on('error', (error) => console.log(error.message));
-    socket.pipe(replicateStream).pipe(socket);
+  let sockets = [];
+  swarm.on('connection', (socket, info) => {
+    sockets.push(socket);
+    store.replicate(socket);
   });
 
-  await node.announce(core.discoveryKey, node.defaultKeyPair).finished();
-  await server.listen();
+  const core = store.get({ name: 'foo', valueEncoding: 'json' });
+  await core.ready();
+
+  await core.append({ foo: 'err' });
+  await core.append({ foo: 'bar' });
+
+  await swarm
+    .join(core.discoveryKey, { server: true, client: false })
+    .flushed();
 
   return {
     CORE_KEY: core.key.toString('hex'),
-    closeCoreNode: () => node.destroy(),
+    closeCoreNode: () => Promise.all([node.destroy(), swarm.destroy()]),
   };
 };
 
 const setupRelay = async (bootstrap) => {
-  const dht = new DHT();
+  const dht = new DHT({ bootstrap });
   await dht.ready();
 
-  const relay = Relay.fromTransport(ws, dht, new WebSocketServer({ port: 0 }));
-  await relay.ready();
+  const server = new WebSocketServer({ port: 0 });
+
+  const proxies = [];
+
+  server.on('connection', async (socket) => {
+    const stream = new Stream(false, socket);
+    const proxy = await relay(dht, stream);
+    proxies.push(proxy);
+  });
 
   return {
-    RELAY_URL: 'ws://127.0.0.1:' + relay._socket.address().port,
-    closeRelay: () => Promise.all([relay.close(), dht.destroy()]),
+    RELAY_URL: 'ws://127.0.0.1:' + server.address().port,
+    closeRelay: () => {
+      return Promise.all([dht.destroy(), server.close()]);
+    },
   };
 };
 
 /** @type {import('aegir').PartialOptions} */
 module.exports = {
   test: {
+    browser: {
+      config: {
+        buildConfig: esbuild,
+      },
+    },
     async before(options) {
-      // const { bootstrap, closeBootstrap } = await setupBootstrap();
-      const { DHT_NODE_KEY, TOPIC, closeNode } = await setupNode();
-      const { CORE_KEY, closeCoreNode } = await setupCore();
-      const { RELAY_URL, closeRelay } = await setupRelay();
+      const { bootstrap, closeBootstrap } = await setupBootstrap();
+      const { DHT_NODE_KEY, TOPIC, closeNode } = await setupNode(bootstrap);
+      const { CORE_KEY, closeCoreNode } = await setupCore(bootstrap);
+      const { RELAY_URL, closeRelay } = await setupRelay(bootstrap);
 
       return {
         closeNode,
         closeRelay,
         closeCoreNode,
-        // closeBootstrap,
+        closeBootstrap,
         env: {
+          BOOTSTRAP: JSON.stringify(bootstrap),
           DHT_NODE_KEY,
           TOPIC,
           RELAY_URL,
@@ -111,7 +141,10 @@ module.exports = {
       await before.closeNode();
       await before.closeRelay();
       await before.closeCoreNode();
-      // await before.closeBootstrap();
+      await before.closeBootstrap();
     },
+  },
+  build: {
+    config: esbuild,
   },
 };

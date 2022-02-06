@@ -91,7 +91,7 @@ export interface Query extends Readable {
 
 export interface DHTOpts {
   keyPair?: KeyPair
-  relay?: string
+  bootstrap?: string[]
 }
 
 export declare class DHT {
@@ -135,4 +135,6 @@ export declare class DHT {
 
   /** Announce that you are listening on a key-pair to the DHT under a specific topic. */
   announce: (topic: Uint8Array, keyPair?: KeyPair) => Query
+
+  create: (opts: DHTOpts & { relays?: string[] }) => Promise<DHT>
 }

@@ -12,75 +12,61 @@ npm install dht-universal
 
 In browser, it will use the `@hyperswarm/dht-relay` with a `WebSocket` transport, so you need to pass a relay URL to the constructor, and wait for it to be ready to confirm the websocket is open.
 
-### Custom relays
+### Drop-in replacement initialization
+
+```js
+import { DHT } from 'dht-universal';
+const node = new DHT({ relay: 'wss://dht-relay.example.com/' });
+await node.ready();
+```
+
+### Async initialization
+
+You can also use the static async function `create` to try multiple relays until one works.
 
 ```js
 import { DHT } from 'dht-universal';
 
-const node = new DHT({ relay: 'wss://dht-relay.example.com/' });
-
-await node.ready();
+const node = await DHT.create({
+  relays: ['wss://dht-relay.example.com/'],
+  ...opts,
+});
+// No need to call `await node.ready()`
 ```
 
 ## API
 
 Should be the same as [@hyperswarm/dht](https://github.com/hyperswarm/dht#api).
 
-### Covered by tests and type definitions:
+### API test coverage:
 
-- Tested in normal DHT
+The goal of this module is to ensure the usability of the DHT in the browser within the common use cases namely Hyperswarm and replicating Hypercores through Corestore:
 
-  - [x] `DHT.keyPair([seed])`
-  - [x] Instantiation
-  - [x] `node.defaultKeyPair`
-  - [x] `node.destroyed`
-  - [x] `node.ready()`
-  - [x] `node.createServer()`
-  - [x] `node.createServer() with firewall`
-  - [x] `node.destroy([opts])`
-  - [x] `server.publicKey`
-  - [x] `server.address()`
-  - [x] `server.listen()`
-  - [x] `server.close()`
-  - [x] `server.on('listening')`
-  - [x] `server.on('connection')`
-  - [x] `server.on('close')`
-  - [x] `node.connect({keyPair}) without optional nodes`
-  - [x] `encryptedConnection.on('open')`
-  - [x] `encryptedConnection.remotePublicKey`
-  - [x] `encryptedConnection.publicKey`
-  - [x] `node.lookup(topic) without options`
-  - [x] `node.announce(topic,keyPair) without relayAddresses or options`
-  - [ ] `node.unannounce`
-  - [ ] `node.immutablePut(value)`
-  - [ ] `node.immutableGet(value)`
-  - [ ] `node.mutablePut(value)`
-  - [ ] `node.mutableGet(value)`
+```js
+import Corestore from 'corestore';
+import Hyperswarm from 'hyperswarm';
+import ram from 'random-access-memory';
+import DHT from 'dht-universal';
 
-- Passing in Relay
+(async () => {
+  const dht = new DHT({ relay: 'wss://dht-relay.example.com/' });
+  const swarm = new Hyperswarm({ dht });
+  const store = new Corestore(ram);
+  await store.ready();
 
-  - [ ] `throw error on invalid relay`
-  - [x] `DHT.keyPair([seed])`
-  - [x] `DHT.create()`
-  - [ ] `node.defaultKeyPair`
-  - [x] `node.createServer()`
-  - [ ] `node.createServer() with firewall`
-  - [ ] `node.destroy([opts])`
-  - [ ] `server.publicKey`
-  - [x] `server.address()`
-  - [x] `server.listen()`
-  - [ ] `server.close()`
-  - [x] `server.on('listening')`
-  - [ ] `server.on('connection')`
-  - [x] `server.on('close')`
-  - [x] `node.connect() without options`
-  - [x] `encryptedConnection.on('open')`
-  - [x] `encryptedConnection.remotePublicKey`
-  - [x] `encryptedConnection.publicKey`
-  - [x] `node.lookup(topic) without options`
-  - [x] `node.announce(topic,keyPair) without relayAddresses or options`
-  - [ ] `node.unannounce`
-  - [ ] `node.immutablePut(value)`
-  - [ ] `node.immutableGet(value)`
-  - [ ] `node.mutablePut(value)`
-  - [ ] `node.mutableGet(value)`
+  swarm.on('connection', (socket) => {
+    store.replicate(socket);
+  });
+
+  const core = store.get({ key: <0x012...def>});
+  await core.ready();
+
+  swarm.join(core.discoveryKey, { server: true, client: true });
+  await swarm.flush();
+
+  await core.update();
+  const block = await core.get(core.length - 1);
+})();
+```
+
+Other unit tests are available but might be removed later.
