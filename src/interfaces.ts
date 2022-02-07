@@ -101,6 +101,8 @@ export declare class DHT {
   constructor (opts?: DHTOpts);
   /** Generate a new key pair. */
   static keyPair: (seed?: Uint8Array) => KeyPair
+  /** Return an instance of the DHT after trying to open one of the relay sockets in the browser, and awaits node.ready() */
+  static create: (opts: DHTOpts & { relays?: string[] }) => Promise<DHT>
   /** Returns a promise that resolves after the node is bootstrapped */
   ready (): Promise<void>;
   /**
@@ -135,6 +137,4 @@ export declare class DHT {
 
   /** Announce that you are listening on a key-pair to the DHT under a specific topic. */
   announce: (topic: Uint8Array, keyPair?: KeyPair) => Query
-
-  create: (opts: DHTOpts & { relays?: string[] }) => Promise<DHT>
 }
